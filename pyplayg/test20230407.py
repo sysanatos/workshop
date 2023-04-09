@@ -1,4 +1,4 @@
-#This is a python test file on workstaion with vscode
+#This is a python test file on workstation with vscode
 
 import sys
 
