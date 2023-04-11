@@ -228,3 +228,79 @@ group by
 order by 
 
 ;
+
+/* DECLARE @CurrentMonth DATE = DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()), 0)
+
+IF EXISTS (SELECT * FROM TableName WHERE DateColumn = @CurrentMonth)
+BEGIN
+  UPDATE TableName
+  SET Column1 = SUM(Column1), Column2 = SUM(Column2), ... 
+  WHERE DateColumn = @CurrentMonth
+END 
+ELSE
+BEGIN
+  INSERT INTO TableName (DateColumn, Column1, Column2, ...)
+  SELECT @CurrentMonth, SUM(Column1), SUM(Column2), ...
+  FROM TableName
+  WHERE MONTH(DateColumn) = MONTH(@CurrentMonth) AND YEAR(DateColumn) = YEAR(@CurrentMonth)
+END
+ */
+
+
+-- business_type_test_summary
+/* 
+SELECT 
+    source_trans_date as 日期,
+    COALESCE(sum(trans_count), 0) as 笔数,
+    COALESCE(SUM(total_trans_amt), 0) as 交易额,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_1' THEN total_trans_amt ELSE 0 END), 0) as 跨境付款（离岸换汇）,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_2' THEN total_trans_amt ELSE 0 END), 0) as 跨境人民币付款,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_3' THEN total_trans_amt ELSE 0 END), 0) as 跨境人民币收款,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_4' THEN total_trans_amt ELSE 0 END), 0) as 网关与支付单报送,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_5' THEN total_trans_amt ELSE 0 END), 0) as 网关b2b支付,
+    sum(total_commission_amt + total_other_income_amt + total_income_amt) as 收入,
+    sum(total_cost_amt) as 成本,
+    sum(total_commission_amt + total_other_income_amt + total_income_amt - total_cost_amt) as 毛利
+FROM anl_cross_business_group_by 
+WHERE 
+    source_trans_date LIKE '202303%'
+GROUP BY 
+    source_trans_date
+ORDER BY
+    source_trans_date 
+    ;
+ */
+
+SELECT 
+--  source_trans_date
+    to_char(current_date, 'YYYYMM') || '00' as 日期,
+    COALESCE(sum(trans_count), 0) as 笔数,
+    COALESCE(SUM(total_trans_amt), 0) as 交易额,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_1' THEN total_trans_amt ELSE 0 END), 0) as 跨境付款（离岸换汇）,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_2' THEN total_trans_amt ELSE 0 END), 0) as 跨境人民币付款,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_3' THEN total_trans_amt ELSE 0 END), 0) as 跨境人民币收款,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_4' THEN total_trans_amt ELSE 0 END), 0) as 网关与支付单报送,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_5' THEN total_trans_amt ELSE 0 END), 0) as 网关b2b支付,
+    sum(total_commission_amt + total_other_income_amt + total_income_amt) as 收入,
+    sum(total_cost_amt) as 成本,
+    sum(total_commission_amt + total_other_income_amt + total_income_amt - total_cost_amt) as 毛利
+FROM anl_cross_business_group_by 
+WHERE 
+    source_trans_date >= DATE_TRUNC('month', CURRENT_DATE)::DATE AND date_column < CURRENT_DATE::DATE
+GROUP BY 
+    日期
+    ;
+
+-- insert if not exists else update
+/*  
+INSERT INTO table_name (column1, column2, ...)
+VALUES (value1, value2, ...)
+ON CONFLICT (column_name)
+DO UPDATE SET column1 = value1, column2 = value2, ...;
+*/
+
+/* 
+SELECT column_name1, column_name2 FROM table_name WHERE condition1
+UNION
+SELECT column_name1, column_name2 FROM table_name WHERE condition2; 
+*/
