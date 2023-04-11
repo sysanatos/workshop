@@ -194,3 +194,37 @@ SELECT
 FROM all_dates
 ORDER BY date, row_name
 ;
+
+
+
+select 
+	today.source_trans_date as 日期,
+    case
+        when today.business_type = 'CROSS_1_1' then '跨境付款(离岸换汇)'
+        when today.business_type = 'CROSS_1_2' then '跨境人民币付款'
+        when today.business_type = 'CROSS_1_3' then '跨境人民币收款'
+        when today.business_type = 'CROSS_1_4' then '网关与支付单报送'
+        when today.business_type = 'CROSS_1_5' then '网关b2b支付'
+        else 'UNKNOWN'
+    end as 业务类型,
+    COALESCE(SUM(today.total_trans_amt), 0) as 当天交易量,
+    COALESCE(SUM(yesterday.total_trans_amt), 0) as 前一天交易量,
+    COALESCE(SUM(today.total_commission_amt + today.total_other_income_amt + today.total_income_amt), 0) AS 当天收入,
+    COALESCE(SUM(yesterday.total_commission_amt + yesterday.total_other_income_amt + yesterday.total_income_amt), 0) AS 前一天收入,
+    COALESCE(SUM(today.total_commission_amt + today.total_other_income_amt + today.total_income_amt - total_cost_amt), 0) AS 当天毛利,
+    COALESCE(SUM(yesterday.total_commission_amt + yesterday.total_other_income_amt + yesterday.total_income_amt - total_cost_amt), 0) AS 前一天毛利,
+    case when 前一天交易量 = 0 then '100.00%' else cast((当天交易量 / 前一天交易量 - 1) * 100 as decimal(10,2)) || '%' end as 交易量日环比，
+    case when 前一天交易量 = 0 then '100.00%' else cast((当天收入 / 前一天收入 - 1) * 100 as decimal(10,2)) || '%' end as 收入日环比，
+    case when 前一天交易量 = 0 then '100.00%' else cast((当天毛利 / 前一天毛利 - 1) * 100 as decimal(10,2)) || '%' end as 毛利日环比
+from
+	anl_cross_business_group_by as today	
+left join
+	anl_cross_business_group_by as yesterday 
+on today.source_trans_date = yesterday.source_trans_date - 1
+where 
+
+group by 
+
+order by 
+
+;
