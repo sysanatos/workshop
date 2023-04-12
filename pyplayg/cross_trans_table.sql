@@ -286,11 +286,14 @@ SELECT
     sum(total_commission_amt + total_other_income_amt + total_income_amt - total_cost_amt) as 毛利
 FROM anl_cross_business_group_by 
 WHERE 
-    source_trans_date >= DATE_TRUNC('month', CURRENT_DATE)::DATE AND date_column < CURRENT_DATE::DATE
-GROUP BY 
+    source_trans_date BETWEEN to_char((DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 day')::DATE, 'YYYYMMDD') AND to_char((current_date - interval '1 day')::DATE, 'YYYYMMDD') 
+GROUP BY
     日期
     ;
 
+
+select (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 day')::DATE;
+SELECT (current_date - interval '1 day')::DATE;
 -- insert if not exists else update
 /*  
 INSERT INTO table_name (column1, column2, ...)
@@ -304,3 +307,47 @@ SELECT column_name1, column_name2 FROM table_name WHERE condition1
 UNION
 SELECT column_name1, column_name2 FROM table_name WHERE condition2; 
 */
+
+---------------------------------------------------------------------------THIS IS A LINE, BLOW IS FINAL WORK-------------------------------------------------------------------------------
+--CROSS TABLE 1 FINAL VERSION
+SELECT 
+    source_trans_date as 日期,
+    COALESCE(sum(trans_count), 0) as 笔数,
+    COALESCE(SUM(total_trans_amt), 0) as 交易额,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_1' THEN total_trans_amt ELSE 0 END), 0) as 跨境付款（离岸换汇）,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_2' THEN total_trans_amt ELSE 0 END), 0) as 跨境人民币付款,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_3' THEN total_trans_amt ELSE 0 END), 0) as 跨境人民币收款,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_4' THEN total_trans_amt ELSE 0 END), 0) as 网关与支付单报送,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_5' THEN total_trans_amt ELSE 0 END), 0) as 网关b2b支付,
+    sum(total_commission_amt + total_other_income_amt + total_income_amt) as 收入,
+    sum(total_cost_amt) as 成本,
+    sum(total_commission_amt + total_other_income_amt + total_income_amt - total_cost_amt) as 毛利
+FROM anl_cross_business_group_by 
+WHERE 
+    source_trans_date LIKE '202304%'
+GROUP BY 
+    日期
+UNION
+SELECT 
+    '0汇总' AS 日期,
+--    to_char(current_date, 'YYYYMM') || '00' as 日期,
+    COALESCE(sum(trans_count), 0) as 笔数,
+    COALESCE(SUM(total_trans_amt), 0) as 交易额,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_1' THEN total_trans_amt ELSE 0 END), 0) as 跨境付款（离岸换汇）,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_2' THEN total_trans_amt ELSE 0 END), 0) as 跨境人民币付款,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_3' THEN total_trans_amt ELSE 0 END), 0) as 跨境人民币收款,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_4' THEN total_trans_amt ELSE 0 END), 0) as 网关与支付单报送,
+    COALESCE(SUM(CASE WHEN business_type = 'CROSS_1_5' THEN total_trans_amt ELSE 0 END), 0) as 网关b2b支付,
+    sum(total_commission_amt + total_other_income_amt + total_income_amt) as 收入,
+    sum(total_cost_amt) as 成本,
+    sum(total_commission_amt + total_other_income_amt + total_income_amt - total_cost_amt) as 毛利
+FROM anl_cross_business_group_by 
+WHERE 
+    source_trans_date BETWEEN to_char((DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 day')::DATE, 'YYYYMMDD') AND to_char((current_date - interval '1 day')::DATE, 'YYYYMMDD') 
+GROUP BY
+    日期
+ORDER BY
+    日期 
+    ;
+
+
