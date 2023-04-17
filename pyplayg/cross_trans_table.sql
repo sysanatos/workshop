@@ -197,6 +197,7 @@ ORDER BY date, row_name
 
 
 
+-- CROSS_TABLE_2_TEST
 select 
 	today.source_trans_date as 日期,
     case
@@ -222,11 +223,16 @@ left join
 	anl_cross_business_group_by as yesterday 
 on today.source_trans_date = yesterday.source_trans_date - 1
 where 
-
+    today.source_trans_date BETWEEN to_char((DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 day')::DATE, 'YYYYMMDD') AND to_char((current_date - interval '1 day')::DATE, 'YYYYMMDD') 
 group by 
-
+    日期,
+    业务类型,
+    交易量日环比,
+    收入日环比，
+    毛利日环比
 order by 
-
+    日期,
+    业务类型
 ;
 
 /* DECLARE @CurrentMonth DATE = DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()), 0)
@@ -349,5 +355,10 @@ GROUP BY
 ORDER BY
     日期 
     ;
+
+-- CROSS TABLE 2
+SELECT  
+
+FROM anl_cross_business_group_by
 
 
