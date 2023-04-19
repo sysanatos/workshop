@@ -357,8 +357,340 @@ ORDER BY
     ;
 
 -- CROSS TABLE 2
-SELECT  
+-- This is a rewritable version below
+/*
+select 
+	fv.日期,
+	case
+        when fv.业务类型 = 'CROSS_1_1' then '跨境付款(离岸换汇)'
+        when fv.业务类型 = 'CROSS_1_2' then '跨境人民币付款'
+        when fv.业务类型 = 'CROSS_1_3' then '跨境人民币收款'
+        when fv.业务类型 = 'CROSS_1_4' then '网关与支付单报送'
+        when fv.业务类型 = 'CROSS_1_5' then '网关b2b支付'
+        else 'UNKNOWN'
+    end as 业务类型,	
+    fv.当天交易量,
+    fv.前一天交易量 as 前一天交易量,
+    fv.当天收入 AS 当天收入,
+    fv.前一天收入 AS 前一天收入,
+    fv.当天毛利 AS 当天毛利,
+    fv.前一天毛利 AS 前一天毛利,
+    fv.交易量日环比 as 交易量日环比,
+    fv.收入日环比 as 收入日环比,
+    fv.毛利日环比 as 毛利日环比
+from
+(*/
+select 
+	today.trans_date as 日期,
+--/*    
+	case
+        when today.business_type = 'CROSS_1_1' then '1跨境付款(离岸换汇)'
+        when today.business_type = 'CROSS_1_2' then '2跨境人民币付款'
+        when today.business_type = 'CROSS_1_3' then '3跨境人民币收款'
+        when today.business_type = 'CROSS_1_4' then '4网关与支付单报送'
+        when today.business_type = 'CROSS_1_5' then '5网关b2b支付'
+        else 'UNKNOWN'
+    end as 业务类型,
+--*/
+--	today.business_type as 业务类型,
+    today.trans_amt as 当天交易量,
+    yesterday.trans_amt as 前一天交易量,
+    today.trans_income AS 当天收入,
+    yesterday.trans_income AS 前一天收入,
+    today.trans_profit AS 当天毛利,
+    yesterday.trans_profit AS 前一天毛利,
+    case 
+	    when today.trans_amt = 0 and yesterday.trans_amt = 0 then '-'
+	    when yesterday.trans_amt = 0 then '100.00%' 
+	    else cast((today.trans_amt / yesterday.trans_amt - 1) * 100 as decimal(10,2)) || '%' 
+	end as 交易量日环比,
+    case 
+	    when today.trans_income = 0 and yesterday.trans_income =0 then '-'
+	    when yesterday.trans_income = 0 then '100.00%' 
+	    else cast((today.trans_income / yesterday.trans_income - 1) * 100 as decimal(10,2)) || '%' 
+	end as 收入日环比,
+    case 
+	    when today.trans_profit = 0 and yesterday.trans_profit = 0 then '-'
+	    when yesterday.trans_profit = 0 then '100.00%' 
+	    else cast((today.trans_profit / yesterday.trans_profit - 1) * 100 as decimal(10,2)) || '%' 
+	end as 毛利日环比
+from 
+	(
+/*----date与business_type补齐测试----*/
+----begin----
+	select 
+		trans_time.trans_date, 
+		bus.business_type, 
+		COALESCE(td.trans_amt, 0) as trans_amt,
+		COALESCE(td.trans_income, 0) as trans_income,
+		coalesce(td.trans_profit, 0) as trans_profit
+	from 
+		(
+		select 'CROSS_1_1' as business_type
+		union
+		select 'CROSS_1_2' as business_type
+		union
+		select 'CROSS_1_3' as business_type
+		union
+		select 'CROSS_1_4' as business_type
+		union
+		select 'CROSS_1_5' as business_type
+		) bus
+		left join (
+			select to_char(t, 'YYYYMMDD') as trans_date from generate_series((DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 day')::DATE, (current_date - interval '1 day')::DATE, INTERVAL '1 day') as t
+/*		'20230310' as tran_date
+		union all
+		select '20230311'
+		union all
+		select '20230312'
+*/		
+		) trans_time
+		on 1=1
+	left join
+	(
+	select 
+		source_trans_date as trans_date,
+		business_type as business_type,
+		COALESCE(SUM(total_trans_amt), 0) as trans_amt,
+		COALESCE(SUM(total_commission_amt + total_other_income_amt + total_income_amt), 0) as trans_income,
+		COALESCE(SUM(total_commission_amt + total_other_income_amt + total_income_amt - total_cost_amt), 0) as trans_profit
+	from anl_cross_business_group_by 
+	group by 
+		trans_date,
+		business_type
+	) td
+	on bus.business_type = td.business_type 
+	and trans_time.trans_date=td.trans_date
+--	where 	
+--	order by 1,2
+----end----
+	) today
+left join 
+	(
+/*	select 
+		source_trans_date as trans_date,
+		business_type as business_type,
+		COALESCE(SUM(total_trans_amt), 0) as trans_amt,
+		COALESCE(SUM(total_commission_amt + total_other_income_amt + total_income_amt), 0) as trans_income,
+		COALESCE(SUM(total_commission_amt + total_other_income_amt + total_income_amt - total_cost_amt), 0) as trans_profit
+	from anl_cross_business_group_by 
+--	where 
+	group by 
+		trans_date,
+		business_type
+		*/
+	select 
+		trans_time.trans_date, 
+		bus.business_type, 
+		COALESCE(td.trans_amt, 0) as trans_amt,
+		COALESCE(td.trans_income, 0) as trans_income,
+		coalesce(td.trans_profit, 0) as trans_profit
+	from 
+		(
+		select 'CROSS_1_1' as business_type
+		union
+		select 'CROSS_1_2' as business_type
+		union
+		select 'CROSS_1_3' as business_type
+		union
+		select 'CROSS_1_4' as business_type
+		union
+		select 'CROSS_1_5' as business_type
+		) bus
+		left join (
+			select to_char(t, 'YYYYMMDD') as trans_date from generate_series((DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 day')::DATE, (current_date - interval '1 day')::DATE, INTERVAL '1 day') as t
+/*		'20230310' as tran_date
+		union all
+		select '20230311'
+		union all
+		select '20230312'
+*/		
+		) trans_time
+		on 1=1
+	left join
+	(
+	select 
+		source_trans_date as trans_date,
+		business_type as business_type,
+		COALESCE(SUM(total_trans_amt), 0) as trans_amt,
+		COALESCE(SUM(total_commission_amt + total_other_income_amt + total_income_amt), 0) as trans_income,
+		COALESCE(SUM(total_commission_amt + total_other_income_amt + total_income_amt - total_cost_amt), 0) as trans_profit
+	from anl_cross_business_group_by 
+	group by 
+		trans_date,
+		business_type
+	) td
+	on bus.business_type = td.business_type 
+	and trans_time.trans_date=td.trans_date
+	) yesterday
+on 
+	to_date(today.trans_date, 'YYYYMMDD') = to_date(yesterday.trans_date, 'YYYYMMDD') + 1 
+	and today.business_type = yesterday.business_type
+where 
+	yesterday.trans_date BETWEEN to_char((DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 day')::DATE, 'YYYYMMDD') AND to_char((current_date - interval '1 day')::DATE, 'YYYYMMDD')
+--	today.trans_date BETWEEN to_char((DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 day')::DATE, 'YYYYMMDD') AND to_char((current_date - interval '1 day')::DATE, 'YYYYMMDD')
+order by 
+	日期,
+--	business_type
+	业务类型
+	;
+/*
+) fv
+order by 
+	日期,
+	业务类型
+;
+	*/
 
-FROM anl_cross_business_group_by
+
+
+-- CROSS TABLE 2
+-- final version
+select 
+	today.trans_date as 日期,
+	case
+		when today.business_type = 'CROSS_1_1' then '1跨境付款(离岸换汇)'
+		when today.business_type = 'CROSS_1_2' then '2跨境人民币付款'
+		when today.business_type = 'CROSS_1_3' then '3跨境人民币收款'
+		when today.business_type = 'CROSS_1_4' then '4网关与支付单报送'
+		when today.business_type = 'CROSS_1_5' then '5网关b2b支付'
+		else 'UNKNOWN'
+	end as 业务类型,
+	today.trans_amt as 当天交易量,
+	yesterday.trans_amt as 前一天交易量,
+	today.trans_income as 当天收入,
+	yesterday.trans_income as 前一天收入,
+	today.trans_profit as 当天毛利,
+	yesterday.trans_profit as 前一天毛利,
+	case
+		when today.trans_amt = 0
+		and yesterday.trans_amt = 0 then '-'
+		when yesterday.trans_amt = 0 then '100.00%'
+		else cast((today.trans_amt / yesterday.trans_amt - 1) * 100 as decimal(10, 2)) || '%'
+	end as 交易量日环比,
+	case
+		when today.trans_income = 0
+		and yesterday.trans_income = 0 then '-'
+		when yesterday.trans_income = 0 then '100.00%'
+		else cast((today.trans_income / yesterday.trans_income - 1) * 100 as decimal(10, 2)) || '%'
+	end as 收入日环比,
+	case
+		when today.trans_profit = 0
+		and yesterday.trans_profit = 0 then '-'
+		when yesterday.trans_profit = 0 then '100.00%'
+		else cast((today.trans_profit / yesterday.trans_profit - 1) * 100 as decimal(10, 2)) || '%'
+	end as 毛利日环比
+from 
+	(
+	select 
+		trans_time.trans_date, 
+		bus.business_type, 
+		coalesce(td.trans_amt, 0) as trans_amt,
+		coalesce(td.trans_income, 0) as trans_income,
+		coalesce(td.trans_profit, 0) as trans_profit
+	from 
+		(
+		select
+			'CROSS_1_1' as business_type
+	union
+		select
+			'CROSS_1_2' as business_type
+	union
+		select
+			'CROSS_1_3' as business_type
+	union
+		select
+			'CROSS_1_4' as business_type
+	union
+		select
+			'CROSS_1_5' as business_type
+		) bus
+	left join (
+		select
+			to_char(t, 'YYYYMMDD') as trans_date
+		from
+			generate_series((DATE_TRUNC('month', CURRENT_DATE) - interval '1 day')::DATE, (current_date - interval '1 day')::DATE, interval '1 day') as t
+		) trans_time
+		on
+		1 = 1
+	left join
+	(
+		select
+			source_trans_date as trans_date,
+			business_type as business_type,
+			coalesce(SUM(total_trans_amt), 0) as trans_amt,
+			coalesce(SUM(total_commission_amt + total_other_income_amt + total_income_amt), 0) as trans_income,
+			coalesce(SUM(total_commission_amt + total_other_income_amt + total_income_amt - total_cost_amt), 0) as trans_profit
+		from
+			anl_cross_business_group_by
+		group by
+			trans_date,
+			business_type
+	) td
+	on
+		bus.business_type = td.business_type
+		and trans_time.trans_date = td.trans_date
+	) today
+left join 
+	(
+	select 
+		trans_time.trans_date, 
+		bus.business_type, 
+		coalesce(td.trans_amt, 0) as trans_amt,
+		coalesce(td.trans_income, 0) as trans_income,
+		coalesce(td.trans_profit, 0) as trans_profit
+	from 
+		(
+		select
+			'CROSS_1_1' as business_type
+	union
+		select
+			'CROSS_1_2' as business_type
+	union
+		select
+			'CROSS_1_3' as business_type
+	union
+		select
+			'CROSS_1_4' as business_type
+	union
+		select
+			'CROSS_1_5' as business_type
+		) bus
+	left join (
+		select
+			to_char(t, 'YYYYMMDD') as trans_date
+		from
+			generate_series((DATE_TRUNC('month', CURRENT_DATE) - interval '1 day')::DATE, (current_date - interval '1 day')::DATE, interval '1 day') as t
+		) trans_time
+		on
+		1 = 1
+	left join
+	(
+		select
+			source_trans_date as trans_date,
+			business_type as business_type,
+			coalesce(SUM(total_trans_amt), 0) as trans_amt,
+			coalesce(SUM(total_commission_amt + total_other_income_amt + total_income_amt), 0) as trans_income,
+			coalesce(SUM(total_commission_amt + total_other_income_amt + total_income_amt - total_cost_amt), 0) as trans_profit
+		from
+			anl_cross_business_group_by
+		group by
+			trans_date,
+			business_type
+	) td
+	on
+		bus.business_type = td.business_type
+		and trans_time.trans_date = td.trans_date
+	) yesterday
+on 
+	to_date(today.trans_date, 'YYYYMMDD') = to_date(yesterday.trans_date, 'YYYYMMDD') + 1
+	and today.business_type = yesterday.business_type
+where 
+	yesterday.trans_date between to_char((DATE_TRUNC('month', CURRENT_DATE) - interval '1 day')::DATE, 'YYYYMMDD') and to_char((current_date - interval '1 day')::DATE, 'YYYYMMDD')
+order by 
+	日期,
+	业务类型
+	;
+
 
 
