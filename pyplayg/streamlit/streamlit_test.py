@@ -2,6 +2,10 @@ import time
 import streamlit as st
 import pandas as pd
 import numpy as np
+import altair as alt
+
+#import plotly.express as px
+import plotly.graph_objects as go
 
 from IPython.display import display
 
@@ -274,3 +278,105 @@ option = st.selectbox('Select option', ('simple', 'full'))
 side_option = st.sidebar.selectbox('Select side option', ('left', 'right'))
 'Your choice:', side_option
 
+st.write("Here is line table test below:")
+
+test_sql_1 = "select source_trans_date as date, sum(total_trans_amt)/10000 as amt, sum(total_commission_amt + total_income_amt + total_other_income_amt) as income from anl_cross_business_group_by group by source_trans_date order by source_trans_date ;"
+test_sql_2 = "select source_trans_date , sum(total_trans_amt), sum(total_commission_amt + total_income_amt + total_other_income_amt) from anl_cross_business_group_by where business_type = 'CROSS_1_1' group by source_trans_date order by source_trans_date ;"
+test_sql_3 = "select source_trans_date , sum(total_trans_amt), sum(total_commission_amt + total_income_amt + total_other_income_amt) from anl_cross_business_group_by where business_type = 'CROSS_1_2' group by source_trans_date order by source_trans_date ;"
+test_sql_4 = "select source_trans_date , sum(total_trans_amt), sum(total_commission_amt + total_income_amt + total_other_income_amt) from anl_cross_business_group_by where business_type = 'CROSS_1_3' group by source_trans_date order by source_trans_date ;"
+test_sql_5 = "select source_trans_date , sum(total_trans_amt), sum(total_commission_amt + total_income_amt + total_other_income_amt) from anl_cross_business_group_by where business_type = 'CROSS_1_4' group by source_trans_date order by source_trans_date ;"
+
+st.write("test_sql_1: trans_amt and income_amt daily")
+df_test_table_1 = pd.read_sql(test_sql_1, pg_conn)
+'''
+df_test_table_1
+
+df_test_table_1 = pd.pivot_table(df_test_table_1, 
+#                            values=[u'当天交易量', u'前一天交易量', u'当天收入', u'前一天收入', u'当天毛利', u'前一天毛利', u'交易量日环比', u'收入日环比', u'毛利日环比'], 
+                            index=[ u'date'])
+df_test_table_1
+'''
+'''
+chart_test_table_1 = (
+        alt.Chart(
+            data=df_test_table_1,
+            title="CROSS LINE TABLE DAILY",
+        )
+        .mark_line()
+        .encode(
+            x=alt.X("amt", axis=alt.Axis(title="amt")),
+            x=alt.X("income", axis=alt.Axis(title="income")),
+        )
+)
+'''
+#st.altair_chart(chart_test_table_1)
+'''
+st.line_chart(df_test_table_1, height=500)
+st.bar_chart(df_test_table_1, height=500)
+
+#try a w-line table
+#def Double_coordinates():  
+#    df = load_data()
+'''
+st.markdown('#### 数据表展示')
+st.table(df_test_table_1)    
+
+st.markdown('#### 双坐标图')
+x = df_test_table_1['date']
+y1_1 = df_test_table_1['amt']
+#    y1_2=df['column']
+    
+y2 = df_test_table_1['income']
+    
+trace0_1 = go.Bar(x=x,y=y1_1,
+                    marker=dict(color="blue"),
+                    opacity=0.5,
+                   name="交易量")
+
+'''
+    trace0_2 = go.Bar(x=x,y=y1_2,
+                    marker=dict(color="red"),
+                    opacity=0.5,
+                   name="新客户")
+'''    
+
+trace1 = go.Scatter(x=x,y=y2,
+                        mode="lines",
+                        name="收入",
+                        # 【步骤一】：使用这个参数yaxis="y2"，就是绘制双y轴图
+                        yaxis="y2")
+    
+data = [trace0_1,trace1]
+    
+layout = go.Layout(title="每日交易金额/收入趋势图",
+                       xaxis=dict(title="日期"),
+                       yaxis=dict(title="交易金额（万元）"),
+                       # 【步骤二】：给第二个y轴，添加标题，指定第二个y轴，在右侧。
+                       yaxis2=dict(title="收入金额（元）",overlaying="y",side="right"),
+                       legend=dict(x=0.88,y=0.98,font=dict(size=17,color="white")),
+                       width=1500,
+                       height=700
+                       )
+    
+fig = go.Figure(data=data,layout=layout)
+    
+st.plotly_chart(fig)
+
+    
+'''
+st.write("test_sql_2: **CROSS_1** line table daily")
+df_test_table_2 = pd.read_sql(test_sql_2, pg_conn)
+st.line_chart(df_test_table_2)
+
+st.write("test_sql_3: **CROSS_2** line table daily")
+df_test_table_3 = pd.read_sql(test_sql_3, pg_conn)
+st.line_chart(df_test_table_3)
+
+st.write("test_sql_4: **CROSS_3** line table daily")
+df_test_table_4 = pd.read_sql(test_sql_4, pg_conn)
+st.line_chart(df_test_table_4)
+
+st.write("test_sql_5: **CROSS_4** line table daily")
+df_test_table_5 = pd.read_sql(test_sql_5, pg_conn)
+st.line_chart(df_test_table_5)
+'''
