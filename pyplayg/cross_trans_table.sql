@@ -542,7 +542,16 @@ order by
 ;
 	*/
 
+/*SELECT 1 AS [Today's Date: 2023-04-21]
 
+DECLARE @dateString VARCHAR(50)
+SET @dateString = CONVERT(VARCHAR(10), GETDATE(), 120)
+DECLARE @sqlString VARCHAR(100)
+SET @sqlString = 'SELECT 1 AS [Today''s Date: ' + @dateString + ']'
+EXEC (@sqlString)
+
+SELECT 1 AS "Today's Date: " || to_char(CURRENT_DATE, 'YYYY-MM-DD');
+*/
 
 -- CROSS TABLE 2
 -- final version
@@ -694,3 +703,80 @@ order by
 
 
 
+--CROSS_TABLE_3:1
+
+select 
+	to_char(to_date(source_trans_date, 'YYYYMMDD'), 'YYYY-MM-DD') as 昨日交易,
+--	business_type ,
+	case
+		when business_type = 'CROSS_1_2' then '跨境人民币付款（CNY）'
+		when business_type = 'CROSS_1_3' then '跨境人民币收款（CNY）'
+	end as 产品,
+	sum(total_trans_amt) as 交易量
+from anl_cross_business_group_by 
+where 
+	business_type in ('CROSS_1_2', 'CROSS_1_3') 
+	and 
+--	source_trans_date BETWEEN to_char(DATE_TRUNC('month', CURRENT_DATE)::DATE, 'YYYYMMDD') AND to_char((current_date - interval '3 day')::DATE, 'YYYYMMDD')
+	source_trans_date = to_char((current_date - interval '3 day')::DATE, 'YYYYMMDD')
+group by 
+	source_trans_date,
+--	business_type
+	产品	
+union 
+select 
+	'本月累计' as 昨日交易,
+/*	case
+		when business_type = 'CROSS_1_2' then '跨境人民币付款（CNY）'
+		when business_type = 'CROSS_1_3' then '跨境人民币收款（CNY）'
+	end as 产品,*/
+	'汇总' as 产品,
+	sum(total_trans_amt) as 交易量
+from anl_cross_business_group_by 
+where 
+	business_type in ('CROSS_1_2', 'CROSS_1_3')
+	and source_trans_date BETWEEN to_char(DATE_TRUNC('month', CURRENT_DATE)::DATE, 'YYYYMMDD') AND to_char((current_date - interval '3 day')::DATE, 'YYYYMMDD')
+group by 
+--	本月累计, 
+	产品
+--	source_trans_date
+ORDER BY
+	昨日交易
+	;
+
+--CROSS_TABLE_3:2
+select 
+	to_char(to_date(source_trans_date, 'YYYYMMDD'), 'YYYY-MM-DD') as 昨日交易,
+--	business_type ,
+	case
+		when business_type = 'CROSS_1_1' then '离岸换汇（USD）'
+	end as 产品,
+	sum(total_trans_amt) as 交易量
+from anl_cross_business_group_by 
+where 
+	business_type in ('CROSS_1_1') 
+	and 
+--	source_trans_date BETWEEN to_char(DATE_TRUNC('month', CURRENT_DATE)::DATE, 'YYYYMMDD') AND to_char((current_date - interval '3 day')::DATE, 'YYYYMMDD')
+	source_trans_date = to_char((current_date - interval '3 day')::DATE, 'YYYYMMDD')
+group by 
+	source_trans_date,
+--	business_type
+	产品	
+union 
+select 
+	'本月累计' as 昨日交易,
+	case
+		when business_type = 'CROSS_1_1' then '离岸换汇（USD）'
+	end as 产品,
+	sum(total_trans_amt) as 交易量
+from anl_cross_business_group_by 
+where 
+	business_type = 'CROSS_1_1'
+	and source_trans_date BETWEEN to_char(DATE_TRUNC('month', CURRENT_DATE)::DATE, 'YYYYMMDD') AND to_char((current_date - interval '3 day')::DATE, 'YYYYMMDD')
+group by 
+--	昨日交易, 
+	产品
+--	source_trans_date 
+ORDER BY
+	昨日交易
+	;
