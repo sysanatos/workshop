@@ -11,8 +11,8 @@ import os
 generated_files = []
 today = datetime.datetime.today().strftime('%Y%m%d')
 now = datetime.datetime.now().strftime('%H%M%S')
-start_date = '20240101'
-end_date = '20240515'
+start_date = '20200101'
+end_date = '20240601'
 # channel_code = ''
 # mysql_query = ''
 # mysql_query_week =''
@@ -124,7 +124,8 @@ def main():
     conditions_file_path = 'D:\work\laptop_bak\py_job\conf\channos.lis' 
     clean_conditions_file(conditions_file_path)
     conditions = read_conditions_from_file(conditions_file_path)
-    
+    mer_count = 0
+    trade_count = 0
     save_directory = os.path.join('D:\work\laptop_bak\py_job', today) 
     if not os.path.exists(save_directory):
         os.makedirs(save_directory)
@@ -206,12 +207,35 @@ def main():
         
         #print(mysql_query)
         mysql_df = mysql_select(mysql_query)
+        if mysql_df.values.size == 0:
+            print(f"{channel_code} does not have any data, skipping and working on the next code")
+            continue
         mysql_df_week = mysql_select(mysql_query_week)
         #print(test_query)
         #mysql_df = mysql_select(test_query)
         postgresql_df = postgresql_select(pg_query)
         oracle_df = oracle_select(ora_query)
         #print(mysql_df)
+        
+        code_count = len(mysql_df)
+        row_count = 0
+        '''
+        print(f"23 {len(postgresql_df)} rows")
+        print(f"shap {postgresql_df.shape}")
+        print(f"23shap{postgresql_df.shape[0]} rows")
+        print(f"24 {len(mysql_df_week)} rows")
+        print(f"24shap{mysql_df_week.shape[0]} rows")
+        print(f"row count mysql {row_count} before")
+        '''
+        row_count = len(mysql_df_week) + len(postgresql_df)
+        #row_count = mysql_df_week.shape[0] + pg_query.shape[0]
+        #print(f"row count mysql {row_count}")
+        mer_count += code_count
+        #print(f"trade_count {trade_count} before")
+        trade_count += row_count
+        #print(f"trade_count {trade_count} after")
+
+    
         
         with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
             mysql_df.to_excel(writer, sheet_name='商户信息', index=False)
@@ -225,7 +249,9 @@ def main():
             ex_print = ""
         print(f"target file {excel_file_path} complete! {ex_print}")
         generated_files.append(excel_file_path)
-
+    
+    print(f"this job is about {mer_count} merchants and {trade_count} rows")
+       
 #    print(f"success!target file {excel_file_path}")
     # zip
     zip_file_name = os.path.join(save_directory, f'{today}_{now}.zip')
