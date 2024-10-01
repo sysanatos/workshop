@@ -12,7 +12,7 @@ generated_files = []
 today = datetime.datetime.today().strftime('%Y%m%d')
 now = datetime.datetime.now().strftime('%H%M%S')
 start_date = '20200101'
-end_date = '20240601'
+end_date = '20241231'
 # channel_code = ''
 # mysql_query = ''
 # mysql_query_week =''
@@ -94,6 +94,20 @@ def oracle_select(ora_query):
     connection.close()
     return ora_df
 
+def oracle_his(ora_his_query):
+    dsn_tns = ora.makedsn('10.66.5.42', '1521', service_name='payhis')
+    connection = ora.connect(user='pay_his', password='TmFv0tusfpWMf6vS', dsn=dsn_tns)
+    ora_his_df = pd.read_sql(ora_his_query, con=connection)
+    connection.close()
+    return ora_his_df
+
+def o_his_select(ohis_query):
+    dsn_tns = ora.makedsn('10.66.5.3', '1521', service_name='pospstd')
+    connection = ora.connect(user='barcode', password='v149i7ZKDyX2', dsn=dsn_tns)
+    ohis_df = pd.read_sql(ohis_query, con=connection)
+    connection.close()
+    return ohis_df
+
 def read_conditions_from_file(file_path):
     with open(file_path, 'r') as file:
         conditions = [line.strip() for line in file]
@@ -158,6 +172,7 @@ def main():
         third_party_uuid    平台订单号,
         third_channel_order_no        三方订单号,
         pay_type            交易类型,
+        -- case when dr_type ='1' then '借记卡' when dr_type = '2' then '贷记卡' when dr_type = '3' then '其他' else dr_type end 		卡类型,
         tran_sts            交易结果,
         amt / 100 交易金额,
         fee_amt / 100 手续费
@@ -173,6 +188,7 @@ def main():
         third_party_uuid    平台订单号,
         third_channel_order_no        三方订单号,
         pay_type            交易类型,
+        -- case when dr_type ='1' then '借记卡' when dr_type = '2' then '贷记卡' when dr_type = '3' then '其他' else dr_type end 		卡类型,
         tran_sts            交易结果,
         amt / 100 交易金额,
         fee_amt / 100 手续费
@@ -196,11 +212,45 @@ def main():
         from clear_org_set_detail t
         left join crm_barcode_cust_info c
         on c.bus_mer_id = t.bus_mer_id
-        where t.bus_mer_id ='"""+channel_code+"""' and t.MER_DATE>='20210101' 
+        where t.bus_mer_id ='"""+channel_code+"""' and t.MER_DATE>='"""+start_date+"""' and t.MER_DATE<='"""+end_date+"""'
         order by t.MER_DATE
         """
 
-        check_24_ex = "select 1 from clear_org_set_detail t left join crm_barcode_cust_info c on c.bus_mer_id = t.bus_mer_id  where t.bus_mer_id ='"+channel_code+"' and t.MER_DATE<'20240101' group by 1"
+        ora_his_query ="""
+        select t.bus_mer_id 商户号,
+        '见结算信息（近期）' 商户名称,
+        t.MER_DATE 交易日,
+        t.CLS_DATE 结算日,
+        t.BANK_NAME 开户行,
+        aes128_decry_by_factor(t.BANK_ACCT_NO_CIPHER, t.diversify_factor) 账号,
+        aes128_decry_by_factor(t.bank_acct_name_cipher, t.diversify_factor) 账户名,
+        t.trade_num 交易笔数,
+        t.trade_amt 交易金额,
+        t.trade_fee_amt 交易手续费,
+        t.acc_amt 入帐金额
+        from clear_org_set_detail t
+        where t.bus_mer_id ='"""+channel_code+"""' and t.MER_DATE>='"""+start_date+"""' and t.MER_DATE<='"""+end_date+"""'
+        order by t.MER_DATE
+        """
+        
+        ohis_query = """
+        select t.trans_time 交易时间,
+        t.sub_mchtno 商户号,
+        t.mcht_name 商户名称,
+        t.plat_order 平台订单号,
+        t.thd_order 三方订单号,
+        t.USER_FLAG 用户标识,
+        t.trans_type 交易类型,
+        t.trans_result 交易结果,
+        t.total_amt 交易金额,
+        t.trans_fee 手续费,
+        t.settle_amt 结算金额
+        from barcode.barcode_trans t
+        where  t.sub_mchtno ='"""+channel_code+"""' and t.filedate >='"""+start_date+"""' and t.filedate < '20240101'
+        order by sub_mchtno,t.trans_time
+        """
+
+        check_24_ex = "select 1 from clear_org_set_detail t where t.bus_mer_id ='"+channel_code+"' and t.MER_DATE<'20240101' group by 1"
     
         xlsx_file = channel_code+'.xlsx'  
         excel_file_path = os.path.join(save_directory, xlsx_file)
@@ -215,6 +265,9 @@ def main():
         #mysql_df = mysql_select(test_query)
         postgresql_df = postgresql_select(pg_query)
         oracle_df = oracle_select(ora_query)
+        oracle_his_df = oracle_his(ora_his_query)
+        ohis_df = o_his_select(ohis_query)
+        
         #print(mysql_df)
         
         code_count = len(mysql_df)
@@ -241,9 +294,14 @@ def main():
             mysql_df.to_excel(writer, sheet_name='商户信息', index=False)
             mysql_df_week.to_excel(writer, sheet_name='交易明细(24年近期)', index=False)
             postgresql_df.to_excel(writer, sheet_name='交易明细(24年往期)', index=False)
-            oracle_df.to_excel(writer, sheet_name='结算信息', index=False)
+            oracle_df.to_excel(writer, sheet_name='结算信息(近期)', index=False)
+            oracle_his_df.to_excel(writer, sheet_name='结算信息(往期)', index=False)
+            ohis_df.to_excel(writer, sheet_name='历史交易明细', index=False)
         ex_df = oracle_select(check_24_ex)
-        if ex_df.values.size > 0:
+        ex_his_df = oracle_his(check_24_ex)
+        ex = ex_df.values.size + ex_his_df.values.size
+        #ex = ex_df.values.size
+        if ex > 0:
             ex_print = "has data before 2024!"
         else:
             ex_print = ""
