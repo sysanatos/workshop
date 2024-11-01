@@ -1,0 +1,39 @@
+{
+    "hosts": [
+      {
+        "type": "HostTypeA",
+        "hostname": "10.66.5.201",
+        "username": "3paradm",
+        "password": "3pardata",
+        "tag_name": "host_201"
+      },
+      {
+        "type": "HostTypeA",
+        "hostname": "10.66.5.209",
+        "username": "3paradm",
+        "password": "3pardata",
+        "tag_name": "host_209"
+      },
+      {
+        "type": "HostTypeA",
+        "hostname": "10.66.5.210",
+        "username": "3paradm",
+        "password": "3pardata",
+        "tag_name": "host_210"
+      },
+      {
+        "type": "HostTypeB",
+        "hostname": "10.66.5.212",
+        "username": "superuser",
+        "password": "1qaz@WSX",
+        "tag_name": "host_212"
+      },
+      {
+        "type": "HostTypeC",
+        "hostname": "10.66.5.211",
+        "username": "superuser",
+        "password": "hnair123",
+        "tag_name": "host_211"
+      }
+    ]
+  }

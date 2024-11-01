@@ -11,7 +11,7 @@ import os
 generated_files = []
 today = datetime.datetime.today().strftime('%Y%m%d')
 now = datetime.datetime.now().strftime('%H%M%S')
-start_date = '20200101'
+start_date = '20230701'
 end_date = '20241231'
 # channel_code = ''
 # mysql_query = ''
