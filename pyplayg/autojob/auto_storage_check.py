@@ -5,7 +5,6 @@ import json
 from abc import ABC, abstractmethod
 
 class HostConnection(ABC):
-    def __init__(self, hostname, username, password):
     def __init__(self, tag_name,hostname, username, password):
         self.tag_name = tag_name
         self.hostname = hostname
