@@ -1,20 +1,12 @@
 import paramiko
 import pandas as pd
 import io
-<<<<<<< HEAD
 import json
 from abc import ABC, abstractmethod
 
 class HostConnection(ABC):
-    def __init__(self, hostname, username, password):
     def __init__(self, tag_name,hostname, username, password):
         self.tag_name = tag_name
-=======
-from abc import ABC, abstractmethod
-
-class HostConnection(ABC):
-    def __init__(self, hostname, username, password):
->>>>>>> 2034663148d1de05934c3303aba1f0294e2f0f35
         self.hostname = hostname
         self.username = username
         self.password = password
@@ -39,15 +31,10 @@ class HostTypeA(HostConnection):
     def get_storage_info(self):
         command = 'showpd'
         result = self.ssh_execute_command(command)
-<<<<<<< HEAD
         result = '\n'.join([line for line in result.split('\n') if '-' not in line])
         #result = '\n'.join([line for line in result.split('\n') if 'total' not in line.lower()])
         return pd.read_csv(io.StringIO(result), sep='\s+')
         
-        
-=======
-        return pd.read_csv(io.StringIO(result), sep='\s+')
->>>>>>> 2034663148d1de05934c3303aba1f0294e2f0f35
 
 class HostTypeB(HostConnection):
     def get_storage_info(self):
@@ -65,7 +52,6 @@ class HostTypeC(HostConnection):
 
 def process_host(host):
     df = host.get_storage_info()
-<<<<<<< HEAD
     #print("init df")
     #print(df)
     # Remove rows where 'cagepos' column is 'total'
@@ -185,21 +171,3 @@ else:
 #process_host(host_211)
 #process_host(host_212)
 '''
-=======
-    print(f"Storage info for {host.hostname}:")
-    print(df)
-    # 这里可以添加更多的处理逻辑
-
-# 使用示例
-host_201 = HostTypeA('10.66.5.201', '3paradm', '3pardata')
-host_209 = HostTypeA('10.66.5.209', '3paradm', '3pardata')
-host_210 = HostTypeA('10.66.5.210', '3paradm', '3pardata')
-host_211 = HostTypeC('10.66.5.211', 'superuser', 'hnair123')
-host_212 = HostTypeB('10.66.5.212', 'superuser', '1qaz@WSX')
-
-process_host(host_201)
-process_host(host_209)
-process_host(host_210)
-process_host(host_211)
-process_host(host_212)
->>>>>>> 2034663148d1de05934c3303aba1f0294e2f0f35
