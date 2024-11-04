@@ -11,7 +11,11 @@ import os
 generated_files = []
 today = datetime.datetime.today().strftime('%Y%m%d')
 now = datetime.datetime.now().strftime('%H%M%S')
+<<<<<<< HEAD
 start_date = '20200101'     #change date to debug local dev
+=======
+start_date = '20200101'
+>>>>>>> 2034663148d1de05934c3303aba1f0294e2f0f35
 end_date = '20241231'
 # channel_code = ''
 # mysql_query = ''
